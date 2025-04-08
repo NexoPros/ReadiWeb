@@ -35,7 +35,7 @@ class ComicsController {
         query: req.query,
       });
     } catch (error) {
-      console.error("Error getting all comics:", error);
+      console.error("Lỗi khi cố gắng lấy hết tất cả truyện:", error);
       next(error);
     }
   }
@@ -54,7 +54,7 @@ class ComicsController {
         allGenres: allGenres,
       });
     } catch (error) {
-      console.error("Error getting create comic form:", error);
+      console.error("Lỗi khi lấy form tạo truyện:", error);
       next(error);
     }
   }
@@ -84,11 +84,11 @@ class ComicsController {
         formAction: `/admin/comics/edit/${comic._id}`, // Action cho form admin
       });
     } catch (error) {
-      console.error(`Error getting comic ${req.params.id} for edit:`, error);
+      console.error(`Lỗi khi lấy truyện ${req.params.id} for edit:`, error);
       if (error instanceof require("mongodb").BSON.BSONTypeError) {
         req.session.message = {
           type: "error",
-          text: "ID Truyện không hợp lệ.",
+          text: "ID truyện không hợp lệ.",
         };
         return res.redirect("/admin/comics");
       }
@@ -98,14 +98,13 @@ class ComicsController {
   // POST - Tạo comic mới
   static async createComic(req, res, next) {
     try {
-      console.log("DEBUG: Uploaded File Info:", req.file);
+      console.log("DEBUG: Đã tải lên thông tin của file:", req.file);
       const db = DatabaseConnection.getDb();
       let imageUrl = null;
 
       if (req.file) {
         imageUrl = `/uploads/covers/${req.file.filename}`;
       }
-
       const { title, author, genres, status, description, releaseDate } =
         req.body;
       let genresArray = genres
@@ -132,9 +131,9 @@ class ComicsController {
       };
       const result = await db.collection("comics").insertOne(newComic);
       console.log(
-        `Comic created: ${title} by ${req.user?.username || "Unknown"} (ID: ${
-          result.insertedId
-        })`
+        `Truyện đã được tạo: ${title} bởi ${
+          req.user?.username || "Unknown"
+        } (ID: ${result.insertedId})`
       );
       req.session.message = {
         type: "success",
@@ -147,7 +146,7 @@ class ComicsController {
         res.redirect("/");
       }
     } catch (error) {
-      console.error("!!! ORIGINAL Error during comic creation:", error);
+      console.error("!!! ORIGINAL Lỗi trong khi đang tạo truyện:", error);
       if (req.file && req.file.path) {
         console.log(`Attempting to delete orphaned upload: ${req.file.path}`);
         fs.unlink(req.file.path, (unlinkErr) => {

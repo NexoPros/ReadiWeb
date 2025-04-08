@@ -14,7 +14,7 @@ class AdminController {
         totalUsers: totalUsers,
       });
     } catch (error) {
-      console.error("Error getting admin dashboard stats:", error);
+      console.error("Lỗi khi lấy dữ liệu cho bảng quản lý admin:", error);
       next(error);
     }
   }

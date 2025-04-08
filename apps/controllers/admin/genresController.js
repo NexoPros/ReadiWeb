@@ -14,7 +14,7 @@ class GenresController {
         .toArray();
       res.render("admin/genres/index", { genres, title: "Quản lý Thể Loại" });
     } catch (error) {
-      console.error("Error getting all genres:", error);
+      console.error("Lỗi khi lấy tất cả thể loại:", error);
       next(error);
     }
   }
@@ -24,7 +24,7 @@ class GenresController {
     try {
       res.render("admin/genres/create", { title: "Thêm Thể Loại Mới" });
     } catch (error) {
-      console.error("Error getting create genre form:", error);
+      console.error("Lỗi khi cố gắng lấy form tạo thể loại:", error);
       next(error);
     }
   }
@@ -37,7 +37,10 @@ class GenresController {
       const genre = await db.collection("genres").findOne({ _id: genreId });
 
       if (!genre) {
-        req.session.message = { type: "error", text: "Genre not found!" };
+        req.session.message = {
+          type: "error",
+          text: "Không tìm thấy thể loại nào!",
+        };
         return res.redirect("/admin/genres");
       }
       res.render("admin/genres/edit", {
@@ -45,11 +48,14 @@ class GenresController {
         title: `Sửa Thể Loại: ${genre.name}`,
       });
     } catch (error) {
-      console.error(`Error getting genre ${req.params.id} for edit:`, error);
+      console.error(
+        `Lỗi khi lấy thể loại ${req.params.id} để chỉnh sửa:`,
+        error
+      );
       if (error instanceof require("mongodb").BSON.BSONTypeError) {
         req.session.message = {
           type: "error",
-          text: "Invalid Genre ID format.",
+          text: "Số hiệu ID của thể loại không hợp lệ.",
         };
         return res.redirect("/admin/genres");
       }
@@ -61,34 +67,33 @@ class GenresController {
   static async createGenre(req, res, next) {
     try {
       const db = DatabaseConnection.getDb();
-      // Cần kiểm tra xem tên genre đã tồn tại chưa
       const existingGenre = await db
         .collection("genres")
         .findOne({ name: req.body.name });
       if (existingGenre) {
         req.session.message = {
           type: "error",
-          text: `Genre "${req.body.name}" already exists!`,
+          text: `Thể loại "${req.body.name}" đã tồn tại!`,
         };
-        return res.redirect("/admin/genres/create"); // Quay lại form tạo
+        return res.redirect("/admin/genres/create");
       }
 
-      const genre = getGenreObject(req.body.name); // Chỉ lấy tên từ model
+      const genre = getGenreObject(req.body.name);
       const result = await db.collection("genres").insertOne(genre);
       console.log(`Genre created with ID: ${result.insertedId}`);
       req.session.message = {
         type: "success",
-        text: "Genre created successfully!",
+        text: "Thể loại được tạo thành công!",
       };
       res.redirect("/admin/genres");
     } catch (error) {
       console.error("Error creating genre:", error);
       req.session.message = {
         type: "error",
-        text: `Error creating genre: ${error.message}`,
+        text: `Lỗi khi tạo thể loại: ${error.message}`,
       };
       res.redirect("/admin/genres/create");
-      // Hoặc next(error);
+      // next(error);
     }
   }
 
@@ -104,9 +109,9 @@ class GenresController {
       if (existingGenre) {
         req.session.message = {
           type: "error",
-          text: `Genre name "${newName}" already exists!`,
+          text: `Tên thể loại "${newName}" đã tồn tại!`,
         };
-        return res.redirect(`/admin/genres/edit/${req.params.id}`); // Quay lại form edit
+        return res.redirect(`/admin/genres/edit/${req.params.id}`);
       }
 
       const updateData = { name: newName };
@@ -117,30 +122,30 @@ class GenresController {
       if (result.matchedCount === 0) {
         req.session.message = {
           type: "error",
-          text: "Genre not found for update.",
+          text: "Không có thể loại nào để cập nhật.",
         };
       } else {
         req.session.message = {
           type: "success",
-          text: "Genre updated successfully!",
+          text: "Thể loại đã được cập nhật thành công!",
         };
       }
       res.redirect("/admin/genres");
     } catch (error) {
-      console.error(`Error updating genre ${req.params.id}:`, error);
+      console.error(`Lỗi khi cập nhật thể loại ${req.params.id}:`, error);
       if (error instanceof require("mongodb").BSON.BSONTypeError) {
         req.session.message = {
           type: "error",
-          text: "Invalid Genre ID format.",
+          text: "Số hiệu ID của thể loại không hợp lệ.",
         };
         return res.redirect("/admin/genres");
       }
       req.session.message = {
         type: "error",
-        text: `Error updating genre: ${error.message}`,
+        text: `Lỗi khi cập nhật thể loại: ${error.message}`,
       };
       res.redirect(`/admin/genres/edit/${req.params.id}`);
-      // Hoặc next(error);
+      // next(error);
     }
   }
 
@@ -162,8 +167,6 @@ class GenresController {
 
     try {
       const db = DatabaseConnection.getDb();
-
-      //Lấy thông tin genre cần xóa (để lấy tên)
       const genreToDelete = await db
         .collection("genres")
         .findOne({ _id: genreId });
@@ -176,20 +179,20 @@ class GenresController {
         return res.redirect("/admin/genres");
       }
 
-      const genreName = genreToDelete.name; // Lấy tên thể loại
-      console.log(`DEBUG: Checking usage for genre name: "[${genreName}]"`);
-      // Tìm MỘT truyện bất kỳ có chứa tên thể loại này trong mảng genres của nó
+      const genreName = genreToDelete.name;
+      console.log(
+        `DEBUG: Kiểm tra sự sử dụng của thể loại tên: "[${genreName}]"`
+      );
       const comicUsingGenre = await db.collection("comics").findOne({
         genres: { $regex: genreName, $options: "i" },
       });
       console.log(
-        `DEBUG: Found comic using genre? ID:`,
+        `DEBUG: Đã thấy được truyện sử dụng thể loại? ID:`,
         comicUsingGenre ? comicUsingGenre._id : null
       );
       if (comicUsingGenre) {
-        // Nếu tìm thấy -> không cho xóa
         console.warn(
-          `Attempted to delete genre "${genreName}" which is in use by comic ${comicUsingGenre._id}`
+          `Đã cố gắng để xóa thể loại "${genreName}" được sử dụng bởi thể loại ${comicUsingGenre._id}`
         );
         req.session.message = {
           type: "error",
@@ -205,21 +208,21 @@ class GenresController {
           text: "Không thể xóa thể loại (có thể đã bị xóa bởi người khác).",
         };
       } else {
-        console.log(`Genre deleted: ${genreName} (ID: ${genreIdParam})`);
+        console.log(`Đã xóa thể loại: ${genreName} (ID: ${genreIdParam})`);
         req.session.message = {
           type: "success",
           text: `Đã xóa thể loại "${genreName}" thành công!`,
         };
       }
-      res.redirect("/admin/genres"); // Chuyển về trang danh sách
+      res.redirect("/admin/genres");
     } catch (error) {
-      console.error(`Error deleting genre ${genreIdParam}:`, error);
+      console.error(`Lỗi khi xóa thể loại ${genreIdParam}:`, error);
       req.session.message = {
         type: "error",
         text: `Lỗi khi xóa thể loại: ${error.message}`,
       };
       res.redirect("/admin/genres");
-      // Hoặc next(error);
+      // next(error);
     }
   }
 }
